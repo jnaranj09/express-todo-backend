@@ -54,6 +54,18 @@ app.get("/tasks", (req, res) => {
 	res.status(200).json(tasks);
 });
 
+app.delete("/task/:id", (req, res) => {
+	const taskId = parseInt(req.params.id);
+	const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+	if (taskIndex === -1) {
+		return res.status(404).json({status: "404 Not Found"});
+	}
+
+	tasks.splice(taskIndex, 1);
+	res.status(204).send();
+});
+
 app.listen(port, () => {
 	console.log(`Server started at port ${port}`);
 });
