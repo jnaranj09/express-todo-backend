@@ -51,7 +51,9 @@ app.post("/task", (req, res) => {
 });
 
 app.get("/tasks", (req, res) => {
-	res.status(200).json(tasks);
+	
+	const limit = req.query.limit ? parseInt(req.query.limit) : tasks.length;
+	res.status(200).json(tasks.slice(0, limit));
 });
 
 app.delete("/task/:id", (req, res) => {
