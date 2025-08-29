@@ -68,6 +68,42 @@ app.delete("/task/:id", (req, res) => {
 	res.status(204).send();
 });
 
+app.patch("/task/:id", (req, res) => {
+
+	const taskId = parseInt(req.params.id);
+
+	const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+	if ( taskIndex === -1 ) {
+		return res.status(404).json({status: "Not Found"});
+	}
+
+	const data = req.body;
+        const destTask = tasks[taskIndex];
+
+	for ( const k of Object.keys(destTask) ) { 
+	if ( k in data ) {
+		destTask[k] = data[k];
+	  }
+	}
+
+	res.status(204).send();
+
+});
+
+
+app.put("/task/:id", (req, res) => {
+
+        const reqTaskId = parseInt(req.params.id);                                                                const taskIndex = tasks.findIndex(task => task.id === reqTaskId);                                    
+        if ( taskIndex === -1 ) {
+	  tasks.push({ id: taskId++, ...req.body });	       return res.status(201).send("Created");
+        } else {
+          tasks[taskIndex] = { id: reqTaskId, ...req.body };
+	}
+
+	res.status(204).send();
+});
+
 app.listen(port, () => {
 	console.log(`Server started at port ${port}`);
 });
