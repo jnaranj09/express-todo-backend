@@ -1,12 +1,11 @@
 import getPublicIp from "./getIp.js";
 import express from "express";
 import getUpTime from "./upTime.js";
+import Database from "better-sqlite3";
 
-const tasks = [];
-
-let taskId = 0;
 const port = 3000;
 const app = express();
+const db = new Database("../todo-db/todo.db");
 
 app.use(express.json());
 
@@ -41,69 +40,96 @@ app.post("/task", (req, res) => {
 	const data = req.body;
 	const title = data.title;
 	const dueDate = data.dueDate
-	if (!title || !dueDate) {
+	if (!title) {
 	return res.status(400).json({status: "400 Bad Request"});
 	}
 
-	tasks.push({id: taskId++, title: title, dueDate: dueDate});
+	const stmt = db.prepare('INSERT INTO tasks(title, due_date) VALUES (?, ?)');
+	const info = stmt.run(title, dueDate);
+
+	console.log(`Inserted with ID: ${info.lastInsertRowid}`);
+
 	res.status(201).json({status: "201 Task Created"});
 
 });
 
+app.get("/task/:id", (req, res) => {
+
+	const taskId = req.params.id;
+	const query = db.prepare('SELECT * FROM tasks WHERE id = ?');
+	const task = query.get(taskId);
+	return task ? res.status(200).json(task) : res.status(404).json({error: "404 NOT FOUND"});
+
+});
+
 app.get("/tasks", (req, res) => {
+	let tasks = [];	
+	const limit = req.query.limit ? parseInt(req.query.limit) : null;
+	if ( limit ) {
+		const stmt = db.prepare('SELECT * FROM tasks LIMIT ?');
+		tasks = stmt.all(limit);
+	} else {
+		const stmt = db.prepare('SELECT * FROM tasks');
+		tasks = stmt.all();
+	}
 	
-	const limit = req.query.limit ? parseInt(req.query.limit) : tasks.length;
-	res.status(200).json(tasks.slice(0, limit));
+	res.status(200).json(tasks);
 });
 
 app.delete("/task/:id", (req, res) => {
 	const taskId = parseInt(req.params.id);
-	const taskIndex = tasks.findIndex(task => task.id === taskId);
 
-	if (taskIndex === -1) {
-		return res.status(404).json({status: "404 Not Found"});
+	if ( Number.isNaN(taskId) ) {
+		return res.status(400).send("bad request");
 	}
-
-	tasks.splice(taskIndex, 1);
+	
+	const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
+	stmt.run(taskId);
 	res.status(204).send();
 });
 
 app.patch("/task/:id", (req, res) => {
-
 	const taskId = parseInt(req.params.id);
-
-	const taskIndex = tasks.findIndex(task => task.id === taskId);
-
-	if ( taskIndex === -1 ) {
-		return res.status(404).json({status: "Not Found"});
+	const validFields = ['title', 'completed', 'dueDate'];
+	const reqFields = Object.keys(req.body).filter( f => validFields.includes(f));
+	if ( reqFields.length === 0 ) {
+	  return res.status(400).json({status: "400 Bad Request", message: "No valid fields provided"});
 	}
-
-	const data = req.body;
-        const destTask = tasks[taskIndex];
-
-	for ( const k of Object.keys(destTask) ) { 
-	if ( k in data ) {
-		destTask[k] = data[k];
-	  }
-	}
-
-	res.status(204).send();
-
+	const setClause = reqFields.map(f => `${f === 'dueDate' ? 'due_date' : f} = @${f}`).join(', ');
+	
+	const stmt = db.prepare(`UPDATE tasks SET ${setClause} WHERE id = @id`);
+	
+	const stmtParams = {
+	  ...req.body,
+	  id: taskId
+	};
+	
+  const result = stmt.run(stmtParams);
+  
+  if ( result.changes === 0 ) {
+    return res.status(404).json({status: "404 Not Found", message: `No task with id=${taskId} found in the database`});
+  }
+	
+	return res.status(200).json({status: "200 Ok", message: ""});
 });
 
 
 app.put("/task/:id", (req, res) => {
 
-        const reqTaskId = parseInt(req.params.id);                                                                const taskIndex = tasks.findIndex(task => task.id === reqTaskId);                                    
-        if ( taskIndex === -1 ) {
-	  tasks.push({ id: taskId++, ...req.body });	       return res.status(201).send("Created");
-        } else {
-          tasks[taskIndex] = { id: reqTaskId, ...req.body };
-	}
+    const taskId = parseInt(req.params.id);
+    
 
-	res.status(204).send();
+
 });
 
 app.listen(port, () => {
 	console.log(`Server started at port ${port}`);
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS tasks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			completed INTEGER DEFAULT 0,
+			due_date DATETIME
+		)
+	`);
 });
