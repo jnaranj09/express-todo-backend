@@ -1,39 +1,15 @@
-import getPublicIp from "./getIp.js";
 import express from "express";
-import getUpTime from "./upTime.js";
-import Database from "better-sqlite3";
+import db from "./adapter/outbound/database/Sqlite.js"
 
 const port = 3000;
-const app = express();
-const db = new Database("../todo-db/todo.db");
 
+const app = express();
 app.use(express.json());
 
-const debugToolBox = async () => {
-	const statusResp = await fetch(`http://localhost:${port}/status`);
-	const statusData = await statusResp.json();
-	const upTime = getUpTime();
-	const ipData = await getPublicIp();
-
-	return {
-		alive: statusData.alive,
-		publicIp: ipData,
-		port: port,
-		upTimeSeconds: upTime
-	};
-};
-
 app.get("/status", async (req, res) => {
-	const debugEnabled = req.query.debug?.toLowerCase() === 'true';
-
-	if (debugEnabled) {
-		const debugInfo = await debugToolBox();
-		res.json(debugInfo);
-	} else {
-		res.json({
-			alive: true
-		})
-	}
+	res.json({
+		alive: true
+	})
 });
 
 app.post("/task", (req, res) => {
@@ -116,20 +92,52 @@ app.patch("/task/:id", (req, res) => {
 
 app.put("/task/:id", (req, res) => {
 
-    const taskId = parseInt(req.params.id);
-    
-
-
+  const taskId = parseInt(req.params.id);
+  const title = req.body.title;
+  const completed = req.body.completed || 0;
+  const dueDate = req.body.dueDate || null;
+  if (!title || ( completed != 0 && completed != 1) ){
+    return res.status(400).json({
+      status: "400 Bad Request",
+      message: "title is required and completed must be 1 or 0"
+    });
+  }
+  
+  const stmt = db.prepare(`
+  INSERT INTO tasks (id, title, completed, due_date) VALUES (@taskId, @title, @completed, @dueDate)
+  ON CONFLICT (id) DO UPDATE SET title = excluded.title, completed = excluded.completed, due_date = excluded.due_date;
+  `);
+  
+  const taskObj = {
+    taskId,
+    title,
+    completed,
+    dueDate
+  };
+  
+  const result = stmt.run(taskObj);
+  
+  const exists = result.lastInsertRowid === 0;
+  const updated = result.changes != 0;
+  
+  if (!exists && updated) {
+    return res.status(201).json({
+      status: "201 Created",
+      message: taskObj
+    });
+  } else if (exists && updated) {
+    return res.status(200).json({
+      status: "200 OK",
+      message: "Task Updated"
+    });
+  }
+  
+  return res.status(500).json({
+    status: "500 Internal Server Error",
+    message: ""
+  });
 });
 
 app.listen(port, () => {
 	console.log(`Server started at port ${port}`);
-	db.exec(`
-		CREATE TABLE IF NOT EXISTS tasks (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			title TEXT NOT NULL,
-			completed INTEGER DEFAULT 0,
-			due_date DATETIME
-		)
-	`);
 });
