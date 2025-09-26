@@ -1,0 +1,54 @@
+schema:
+    tables:
+        Customers
+        Orders
+
+Joins
+
+    Inner join customers with orders to show customer names and products.
+
+    Left join to list all customers even if they haven’t ordered.
+
+    Simulate right join in SQLite.
+
+    Full outer join simulation using UNION.
+
+    Cross join to produce all combinations of customers and products.
+
+    Join with an aggregate query (e.g., total spending per customer).
+
+
+Subqueries
+
+    Find customers with total spending above a certain threshold.
+
+    List customers who ordered a specific product.
+
+    Get orders placed by customers in a specific city.
+
+    Find customers who never placed an order.
+
+    Retrieve the most expensive order per customer.
+
+    Show orders above the average order amount.
+
+    Count how many products each customer bought using subquery in SELECT.
+
+    Find the earliest and latest order dates for each customer.
+
+    Use EXISTS to find customers who ordered laptops.
+
+    Use a correlated subquery to show each customer’s highest order.
+
+
+Extra Challenges
+
+    Sort customers by their total spending.
+
+    Filter orders placed in March only.
+
+    Calculate the average order amount by city.
+
+    Identify top 2 customers with the highest total spending.
+
+    Show customers who placed more than one order.
