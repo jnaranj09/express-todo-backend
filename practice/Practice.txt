@@ -6,27 +6,29 @@ schema:
 Joins
 
     Inner join customers with orders to show customer names and products.
+        SELECT c.name, o.product FROM customers as C INNER JOIN orders AS o ON c.customer_id = o.customer_id ORDER BY c.name;
 
     Left join to list all customers even if they haven’t ordered.
-
-    Simulate right join in SQLite.
-
-    Full outer join simulation using UNION.
-
-    Cross join to produce all combinations of customers and products.
+        Same with LEFT JOIN
 
     Join with an aggregate query (e.g., total spending per customer).
+        SELECT c.name, SUM(o.amount) AS total FROM customers AS c INNER JOIN orders AS o ON c.customer_id = o.customer_id GROUP BY c.name ORDER BY c.name;
 
 
 Subqueries
 
     Find customers with total spending above a certain threshold.
+        SELECT c.name, SUM(o.amount) AS total FROM customers AS c INNER JOIN orders AS o ON c.customer_id = o.customer_id GROUP BY c.name HAVING total > (SELECT AVG(amount) FROM orders) ORDER BY 
+c.name;
 
     List customers who ordered a specific product.
+        SELECT name FROM customers WHERE customer_id IN (SELECT customer_id FROM orders WHERE product = 'Laptop');
 
     Get orders placed by customers in a specific city.
+        SELECT * FROM orders WHERE customer_id IN (SELECT customer_id FROM customers WHERE city = 'Denver');
 
     Find customers who never placed an order.
+        SELECT * FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM orders);
 
     Retrieve the most expensive order per customer.
 
